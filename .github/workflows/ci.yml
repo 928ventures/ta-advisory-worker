@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check
+        run: |
+          node --check index.js
+          node --check worker.js
+          for f in tests/*.js; do node --check "$f"; done
+
+      - name: Run unit tests
+        run: npm test
+        env:
+          # Dummy token: index.js requires NOTION_TOKEN to be set to
+          # construct the client, but unit tests never make network calls.
+          NOTION_TOKEN: ci-test-token

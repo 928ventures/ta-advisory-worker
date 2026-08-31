@@ -1,0 +1,46 @@
+name: Scheduled Worker Run
+
+on:
+  schedule:
+    # 13:00 UTC, Monday-Friday. Adjust to your preferred cadence.
+    - cron: '0 13 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Write reminder-date updates back to Notion (--apply)'
+        required: false
+        default: false
+        type: boolean
+      reminder_date:
+        description: 'Reminder date to set for overdue candidates (YYYY-MM-DD, defaults to today)'
+        required: false
+        type: string
+
+jobs:
+  run-worker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run worker
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          REMINDER_DATE: ${{ inputs.reminder_date }}
+        run: |
+          # Scheduled (cron) runs always execute as a dry run for safety.
+          # Manual runs (workflow_dispatch) can opt into --apply explicitly.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.apply }}" = "true" ]; then
+            node worker.js --apply
+          else
+            node worker.js
+          fi
