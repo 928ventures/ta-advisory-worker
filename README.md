@@ -3,6 +3,16 @@
 Scripts for connecting to a Notion candidate-tracking database, reporting on
 candidates that need follow-up, and syncing reminder updates back to Notion.
 
+## How candidates get into the system
+Candidates are added and edited directly in the Notion database UI, the
+same way you always would — there is no separate ingestion step, API call,
+or file upload required. The `NOTION_TOKEN` in `.env` is only the
+integration's read/write credential so the scripts can access the
+database; it is not a mechanism for inserting data yourself.
+Any row present in the shared database (see "Database requirements"
+below) at the time `worker.js` runs — whether added moments ago or long
+ago — will be picked up automatically.
+
 ## Setup
 
 1. Install dependencies:
@@ -94,10 +104,26 @@ Secrets and variables → Actions) with the same value as your local `.env`.
 Scheduled runs never pass `--apply` automatically, to avoid unattended
 writes to the live database.
 
+## Database requirements
+
+- **Fixed database ID:** the worker only reads the database whose ID is
+  hardcoded as `DATABASE_ID` in `worker.js` (currently
+  `96f2ec7166104d68b52c4c6ffeb809ad`). Candidates in any other Notion
+  database will not be seen. To track a different database, update
+  `DATABASE_ID` in `worker.js` (or extend it to accept the ID as an
+  argument).
+- **Must be shared with the integration:** the database (or its parent
+  page) must be connected to your integration — in Notion, open it →
+  **•••** → **Connections** → connect your integration. If it isn't
+  shared, requests fail with a Notion `object_not_found` error even
+  though the database exists.
+- **Single data source expected:** the worker queries the database's
+  first data source. If the database has multiple data sources, it logs
+  a warning and only reads/updates the first one.
+
 ## Database schema notes
 
-The worker targets a fixed `DATABASE_ID` (see `worker.js`). Notable
-properties on the underlying data source include:
+Notable properties on the underlying data source include:
 
 - `Candidate` (title)
 - `Action Needed` (date) — read and updated by `worker.js`
