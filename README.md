@@ -76,6 +76,24 @@ REMINDER_DATE=2026-09-15 node worker.js --apply
 review the dry-run output first to confirm which candidates will be
 updated.
 
+## CI / Automation
+
+Two GitHub Actions workflows are included:
+
+- `.github/workflows/ci.yml` — runs on every push/PR to `main`: syntax
+  checks (`node --check`) and the unit test suite (`npm test`, using
+  Node's built-in test runner against `tests/`).
+- `.github/workflows/scheduled-worker.yml` — runs `worker.js` on a cron
+  schedule (weekdays at 13:00 UTC by default) as a **dry run** that reports
+  overdue candidates in the workflow log. It can also be triggered manually
+  via "Run workflow", optionally passing `apply: true` and a custom
+  `reminder_date` to actually write updates back to Notion.
+
+Both workflows require a `NOTION_TOKEN` repository secret (Settings →
+Secrets and variables → Actions) with the same value as your local `.env`.
+Scheduled runs never pass `--apply` automatically, to avoid unattended
+writes to the live database.
+
 ## Database schema notes
 
 The worker targets a fixed `DATABASE_ID` (see `worker.js`). Notable
